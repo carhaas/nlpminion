@@ -7,6 +7,17 @@ from collections import Counter  # multiset represented by dictionary
 
 
 def translate(decoder_bin, ini, weights, nl_file, kbest=0):
+    '''Given a file of input sentence, a cdec configuration, some weights and the location of the decoder bin,
+    sends a call to cdec and returns cdec'c translation as a string. Optionally returns a unique k-best list whose
+    size can be set via kbest
+
+    :param decoder_bin: the location of the cdec script
+    :param ini: the cdec configuration file
+    :param weights: a weights file
+    :param nl: the file containing sentences to be translated
+    :param kbest: the size of the kbest list
+    :return: the translation string as returned by cdec
+    '''
     args = [decoder_bin,
             '-c', ini,
             '-w', weights,
@@ -25,6 +36,17 @@ def translate(decoder_bin, ini, weights, nl_file, kbest=0):
 
 
 def translate_sentence(decoder_bin, ini, weights, nl, kbest=0):
+    '''Given a string, a cdec configuration, some weights and the location of the decoder bin,
+    sends a call to cdec and returns cdec'c translation as a string. Optionally returns a unique k-best list whose
+    size can be set via kbest
+
+    :param decoder_bin: the location of the cdec script
+    :param ini: the cdec configuration file
+    :param weights: a weights file
+    :param nl: the natural language string to be translated
+    :param kbest: the size of the kbest list
+    :return: the translation string as returned by cdec
+    '''
     args = [decoder_bin,
             '-c', ini,
             '-w', weights]
@@ -48,6 +70,15 @@ def translate_sentence(decoder_bin, ini, weights, nl, kbest=0):
 
 
 def bleu(script_path, references, input):
+    '''
+    Given a file to be scores and its true references, calls cdec's corpus-wide BLEU script
+    and returns the value as a string
+
+    :param script_path: the path where cdec's bleu script lies
+    :param references: a file containing translation options for
+    :param input: a file containg the sentence to be scored
+    :return: a corpus-wide BLEU score
+    '''
     args = [script_path,
             '-r', references,
             '-i', input]
@@ -63,6 +94,19 @@ def bleu(script_path, references, input):
 
 
 def per_sentence_bleu(nl, references, n=4, smooth=0.0):
+    '''
+    Implementation of per-sentence BLEU as defined by (Nakov et al., 2012).
+
+    A string to be scored and its reference(s) (more than 1 possible per sentence) are passed to the function.
+    It returns the per-sentence BLEU score.
+    Optionally changed the n-gram size via n and a smoothing parameter via smooth.
+
+    :param nl: a natural language string to be investigated
+    :param references: the nl's true translation option(s)
+    :param n: order of n-gram
+    :param smooth: smoothing value
+    :return: per-sentence BLEU score
+    '''
     if nl.strip() == "":
         return 0.0  # no translation
     log_bleu = 0.0
@@ -85,6 +129,15 @@ def per_sentence_bleu(nl, references, n=4, smooth=0.0):
 
 
 def ngram(nl, references, n):
+    '''
+    Given a sentence to be scored and its reference, counts how many (clipped) n-gram in the sentence
+    are also in the reference.
+
+    :param nl: a natural language string to be investigated
+    :param references: the nl's true translation option(s)
+    :param n: order of n-gram
+    :return: the n-gram based precision of this n-gram order
+    '''
     input_ngrams = Counter(zip(*[nl.split(" ")[i:] for i in range(n)]))
     references_ngrams = []
     for ref in references:
@@ -102,8 +155,4 @@ def ngram(nl, references, n):
     # would cause log(0) below so we raise here so we can catch and return 0.0 BLEU in caller function
     if (count_clipped+add) == 0:
         raise ValueError("math domain error")
-    print "count clipped: %s" % count_clipped
-    print "count_input_ngrams: %s" % count_input_ngrams
-    print "add: %s" % add
-    print math.log(count_clipped + add) - math.log(count_input_ngrams + add)
     return math.log(count_clipped + add) - math.log(count_input_ngrams + add)
